@@ -1,0 +1,19 @@
+# Dockerignore for Express Backend
+
+# Ignore local dependencies and build outputs
+node_modules/
+dist/
+npm-debug.log*
+
+# Ignore secrets and environment configs (CRITICAL SECURITY)
+.env
+.env.local
+*.pem
+*.key
+
+# Ignore git and local IDE configs
+.git
+.gitignore
+.vscode/
+.idea/
+README.md

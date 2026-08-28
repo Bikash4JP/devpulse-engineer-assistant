@@ -1,0 +1,42 @@
+name: DevPulse CI/CD AWS Deployment Pipeline
+
+on:
+  push:
+    branches: [ main ]
+
+jobs:
+  test-and-deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: 📥 Checkout Source Code
+        uses: actions/checkout@v3
+
+      - name: 🟢 Setup Node.js Environment
+        uses: actions/setup-node@v3
+        with:
+          node-version: 20
+
+      - name: 📦 Install Backend Dependencies
+        run: |
+          cd backend
+          npm ci
+
+      - name: 🧪 Run Automated Integration Tests
+        run: |
+          cd backend
+          npm run build
+
+      - name: 🚀 Deploy to AWS EC2 Server via SSH
+        if: success()
+        uses: appleboy/ssh-action@v1.0.0
+        with:
+          host: ${{ secrets.EC2_HOST }}
+          username: ubuntu
+          key: ${{ secrets.EC2_SSH_PRIVATE_KEY }}
+          script: |
+            cd ~/engineer-assistant-app
+            git pull origin main
+            docker compose down
+            docker compose up -d --build
+            echo "🎉 Deployment to AWS EC2 Succeeded!"

@@ -1,0 +1,124 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                String       @id @default(uuid())
+  email             String       @unique
+  name              String
+  password          String       // bcrypt hashed password
+  createdAt         DateTime     @default(now())
+  updatedAt         DateTime     @updatedAt
+  tasks             Task[]
+  oauthTokens       OAuthToken[]
+
+  // Daily summary settings
+  language          String?    // e.g., "en", "es", "ja"
+  pushToken        String?    // device push token for notifications
+  summaryTime       String?      // HH:mm (24‑hour format)
+  summaryFrequency  Int          @default(1)   // times per day
+  smartReplyEnabled Boolean      @default(false)
+
+  hourlyActivities HourlyActivity[]
+  summaryRequests SummaryRequest[]
+  @@index([email])
+  // New relation to stored OAuth/email credentials
+  credentials      Credential[]
+  messages         Message[]
+}
+
+model Task {
+  id          String   @id @default(uuid())
+  title       String
+  description String?
+  isCompleted Boolean  @default(false)
+  dueDate     DateTime?
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@index([userId])
+  @@index([isCompleted])
+}
+
+model OAuthToken {
+  id           String   @id @default(uuid())
+  provider     String   // e.g. "SLACK", "LINE", "LINKEDIN"
+  accessToken  String
+  refreshToken String?
+  userId       String
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt    DateTime @default(now())
+
+  @@unique([userId, provider])
+  @@index([userId])
+}
+
+// New tables for activity tracking and summary requests
+model HourlyActivity {
+  id                String   @id @default(uuid())
+  userId            String
+  user              User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  appName           String
+  activityTimestamp DateTime @default(now())
+  count             Int      @default(0)
+
+  @@index([userId, appName, activityTimestamp])
+}
+
+model SummaryRequest {
+  id          String   @id @default(uuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  summaryDate DateTime @default(now())
+  s3Key       String
+  status      String   @default("PENDING") // PENDING, COMPLETED, FAILED
+  createdAt   DateTime @default(now())
+
+  @@unique([userId, summaryDate])
+}
+
+model Credential {
+  id           String   @id @default(uuid())
+  userId       String
+  provider     Provider
+  accessToken  String   // encrypted at rest
+  refreshToken String?  // encrypted, optional
+  expiresAt    DateTime?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum Provider {
+  SLACK
+  LINE
+  GMAIL
+}
+
+model Message {
+  id          String   @id @default(uuid())
+  userId      String
+  source      MessageSource
+  channelId   String?   // Slack channel ID / LINE group ID
+  threadId    String?   // optional thread identifier
+  externalId  String    // Slack ts, LINE message ID, or Gmail UID
+  content     String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  user User @relation(fields: [userId], references: [id])
+}
+
+enum MessageSource {
+  SLACK
+  LINE
+  EMAIL
+}
