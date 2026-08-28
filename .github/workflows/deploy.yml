@@ -10,10 +10,10 @@ jobs:
 
     steps:
       - name: 📥 Checkout Source Code
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4
 
       - name: 🟢 Setup Node.js Environment
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: 20
 
@@ -29,7 +29,7 @@ jobs:
 
       - name: 🚀 Deploy to AWS EC2 Server via SSH
         if: success()
-        uses: appleboy/ssh-action@v1.0.0
+        uses: appleboy/ssh-action@v1.2.1
         with:
           host: ${{ secrets.EC2_HOST }}
           username: ubuntu
